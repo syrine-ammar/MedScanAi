@@ -1,0 +1,321 @@
+body {
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+  overflow-x: hidden;
+}
+
+.home-container {
+  min-height: 100vh;
+  /* Updated to match public folder */
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  position: relative;
+  color: #333;
+  position: relative;
+}
+
+header {
+  background-color: #2c3e50;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo img {
+  height: 70px;
+  margin-right: 20px;
+}
+
+.logo-text {
+  font-size: 30px;
+  font-weight: bold;
+  color: #ecf0f1;
+}
+
+.admin-login {
+  background-color: #36c2e6;
+  color: rgb(14, 13, 13);
+  font-size: 20px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.admin-login:hover {
+  background-color: #b9ddeb;
+}
+
+.content {
+  padding: 80px 40px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 60px); /* Adjust for header height */
+}
+
+.content-box {
+  background-color: rgba(255, 255, 255, 0.3); /* White with 80% opacity */
+  backdrop-filter: blur(10px); /* Blur effect (supported in modern browsers) */
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 800px;
+}
+.login-specific {
+  max-width: 1000px; /* Wider content box for Login.js only */
+}
+
+h1 {
+  font-size: 68px;
+  margin-bottom: 30px;
+  color: #ffffff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.lead {
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-size: 40px;
+  margin-top: 20px;
+  margin-bottom: 30px;
+  color: #0a0327;
+}
+
+.service-btn {
+  padding: 35px 40px;
+  font-size: 25px;
+  margin: 40px;
+  border: bold white 1px ;
+  border-radius: 10px;
+  cursor: pointer;
+  background-color: #1c3f57;
+  color: white;
+  transition: transform 0.3s, background-color 0.3s;
+}
+
+.service-btn:hover {
+  transform: scale(1.1);
+  background-color: #587ae9;
+}
+
+input {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+/* Navbar Styles */
+nav {
+  height: calc(100vh - 90px); /* Adjust for header height */
+  top: 90px;
+  position: fixed;
+  left: 0;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(16px);
+  padding: 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+}
+
+nav ul li a {
+  display: block;
+  color: #2C3E50;
+  text-decoration: none;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+nav ul li a:hover {
+  background-color: #4F68C5;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(79, 104, 197, 0.3);
+}
+
+.doctor-name {
+  text-decoration: none;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 20px;
+  font-weight: bold;
+  color: #2C3E50; /* Dark text for contrast */
+  
+  /* Frosted glass effect */
+  background: rgba(255, 255, 255, 0.8); /* 80% opaque white */
+  backdrop-filter: blur(12px); /* Stronger blur */
+  -webkit-backdrop-filter: blur(12px); /* Safari support */
+  
+  /* Rounded borders */
+  border-radius: 16px; /* More rounded */
+  border: 1px solid rgba(255, 255, 255, 0.5); /* Semi-transparent border */
+  
+  /* Spacing and effects */
+  padding: 10px 20px;
+  margin-left: auto;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.1), /* Outer shadow */
+    inset 0 1px 0 rgba(255, 255, 255, 0.3); /* Inner glow */
+  
+  /* Smooth transitions */
+  transition: all 0.3s ease;
+}
+
+/* Hover effect */
+.doctor-name:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+/* segment page */
+.main-content {
+  flex: 1;
+  padding: 20px;
+  margin-left: 256px; /* Matches navbar width (w-64) */
+  min-height: calc(100vh - 80px); /* Adjust based on header height */
+  overflow-x: hidden; /* Prevent horizontal overflow */
+  width: calc(100% - 256px); /* Ensure content width respects navbar */
+  position: relative; /* Ensure proper positioning context */
+  z-index: 1; /* Ensure content is below navbar */
+}
+
+.container-fluid {
+  padding: 20px;
+  max-width: 100%;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.img-fluid {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.d-flex.flex-wrap.justify-content-center {
+  gap: 10px; /* Space between images */
+}
+
+.d-flex.flex-wrap.justify-content-center img {
+  max-height: 200px;
+  max-width: 200px;
+  margin: 0; /* Remove margin to avoid overlap */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0; /* Remove margin on small screens if navbar collapses */
+    width: 100%;
+    padding: 10px;
+  }
+  .d-flex.flex-wrap.justify-content-center img {
+    max-height: 150px;
+    max-width: 150px;
+  }
+}
+
+
+/* New button class for Admin page */
+.admin-action-btn {
+  padding: 4px 8px; /* Smaller padding for smaller buttons */
+  margin: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px; /* Smaller text size */
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Color-specific styles */
+.admin-action-btn.bg-green-500 {
+  background-color: #2ecc71; /* Green for Accept */
+  color: white;
+}
+
+.admin-action-btn.bg-blue-500 {
+  background-color: #3498db; /* Blue for Edit */
+  color: white;
+}
+
+.admin-action-btn.bg-red-500 {
+  background-color: #e74c3c; /* Red for Reject and Delete */
+  color: white;
+}
+
+.admin-action-btn.bg-gray-400 {
+  background-color: #95a5a6; /* Grey for View */
+  color: white;
+}
+
+/* Hover effects */
+.admin-action-btn.bg-green-500:hover {
+  background-color: #27ae60; /* Darker green */
+  transform: scale(1.05);
+}
+
+.admin-action-btn.bg-blue-500:hover {
+  background-color: #2980b9; /* Darker blue */
+  transform: scale(1.05);
+}
+
+.admin-action-btn.bg-red-500:hover {
+  background-color: #c0392b; /* Darker red */
+  transform: scale(1.05);
+}
+
+.admin-action-btn.bg-gray-400:hover {
+  background-color: #7f8c8d; /* Darker grey */
+  transform: scale(1.05);
+}
+
+/* Disabled state (optional) */
+.admin-action-btn:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.table-patients {
+  margin-top:50px;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-patients th,
+.table-patients td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}

@@ -1,0 +1,46 @@
+body {
+  background-color: #f8f9fa;
+}
+
+
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.row {
+  margin-bottom: 1rem;
+}
+
+.navbar-nav .nav-link {
+  cursor: pointer;
+}
+
+.container-fluid {
+  padding: 20px;
+}
+
+.card {
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.d-flex img {
+  display: block; /* Ensure images are block elements */
+  height: auto; /* Maintain aspect ratio */
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
