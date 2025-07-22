@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-function Admin({ user }) {
+function Admin({ user , handleLogout }) {
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -46,7 +46,7 @@ function Admin({ user }) {
     };
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing
-      ? `http://localhost:5000/api/admin/doctors/${selectedDoctor._id}`
+      ? `http://localhost:5000/api/admin/doctors/${selectedDoctor.id}`
       : 'http://localhost:5000/api/register';
 
     try {
@@ -105,8 +105,8 @@ function Admin({ user }) {
           <img src={`${process.env.PUBLIC_URL}/logo1.jpg`} alt="MedAscan AI Logo" />
           <span className="logo-text">MedScan AI</span>
         </Link>
-       <Link to="/profile" className="doctor-name flex items-center gap-2">
-                 👤 Admin. {user?.nom || ''} {user?.prenom || ''}
+       <Link  className="doctor-name flex items-center gap-2">
+                 👤 Admin. {user?.email || ''} 
         </Link> </header>
 
       <div className="flex h-screen">
@@ -117,7 +117,7 @@ function Admin({ user }) {
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <li><Link to="/acceuilservice" style={navLinkStyle}>👨‍⚕️ Liste Médecins</Link></li>
             <li><Link to="/Listadmin" style={navLinkStyle}>👤 Liste Admins</Link></li>
-            <li><button onClick={() => navigate('/admin/login')} >↩️ Déconnexion</button></li>
+            <li><button onClick={() => { handleLogout(); navigate('/admin/login'); }} >↩️ Déconnexion</button></li>
           </ul>
         </nav>
 
@@ -162,7 +162,7 @@ function Admin({ user }) {
               </tr></thead>
               <tbody>
                 {doctors.map(doc => (
-                  <tr key={doc._id}>
+                  <tr key={doc.id}>
                     <td style={tdStyle}>{doc.nom}</td>
                     <td style={tdStyle}>{doc.prenom}</td>
                     <td style={tdStyle}>{doc.email}</td>
@@ -171,8 +171,8 @@ function Admin({ user }) {
                     <td style={tdStyle}>{doc.approved ? 'Approved' : 'Rejected'}</td>
                     <td style={{ ...tdStyle, display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => { setSelectedDoctor(doc); setIsEditing(false); setShowAddForm(false); }} style={{ ...actionBtn, background: '#3498db' }}>View</button>
-                      <button onClick={() => handleApproveReject(doc._id, 'approve')} style={{ ...actionBtn, background: '#27ae60' }}>Accept</button>
-                      <button onClick={() => handleApproveReject(doc._id, 'reject')} style={{ ...actionBtn, background: '#c0392b' }}>Reject</button>
+                      <button onClick={() => handleApproveReject(doc.id, 'approve')} style={{ ...actionBtn, background: '#27ae60' }}>Accept</button>
+                      <button onClick={() => handleApproveReject(doc.id, 'reject')} style={{ ...actionBtn, background: '#c0392b' }}>Reject</button>
                     </td>
                   </tr>
                 ))}
@@ -223,8 +223,8 @@ function Admin({ user }) {
                 <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {!isEditing && !selectedDoctor.approved && (
                     <>
-                      <button onClick={() => { handleApproveReject(selectedDoctor._id, 'approve'); setSelectedDoctor(null); }} style={{ ...actionBtn, background: '#27ae60' }}>Accept</button>
-                      <button onClick={() => { handleApproveReject(selectedDoctor._id, 'reject'); setSelectedDoctor(null); }} style={{ ...actionBtn, background: '#c0392b' }}>Reject</button>
+                      <button onClick={() => { handleApproveReject(selectedDoctor.id, 'approve'); setSelectedDoctor(null); }} style={{ ...actionBtn, background: '#27ae60' }}>Accept</button>
+                      <button onClick={() => { handleApproveReject(selectedDoctor.id, 'reject'); setSelectedDoctor(null); }} style={{ ...actionBtn, background: '#c0392b' }}>Reject</button>
                     </>
                   )}
                   {!isEditing ? (
@@ -253,7 +253,7 @@ function Admin({ user }) {
                       }} style={{ ...actionBtn, background: '#bdc3c7', color: '#2c3e50' }}>Cancel</button>
                     </>
                   )}
-                  <button onClick={() => { handleDelete(selectedDoctor._id); setSelectedDoctor(null); }} style={{ ...actionBtn, background: '#c0392b' }}>Delete</button>
+                  <button onClick={() => { handleDelete(selectedDoctor.id); setSelectedDoctor(null); }} style={{ ...actionBtn, background: '#c0392b' }}>Delete</button>
                   <button onClick={() => setSelectedDoctor(null)} style={{ ...actionBtn, background: '#7f8c8d' }}>Close</button>
                 </div>
               </div>

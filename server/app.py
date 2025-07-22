@@ -20,6 +20,8 @@ import requests
 
 from pymongo import MongoClient
 import trimesh
+from bson import ObjectId
+
 
 app = Flask(__name__)
 CORS(app)
@@ -181,10 +183,10 @@ def register():
         "telephone": data.get('telephone', ''),
         "titre": data.get('titre', ''),
         "specialite": data.get('specialite', ''),
-        "approved": True,
+        "approved": False,
         "role": "doctor"
     }
-    result = mongo.db.profile.insert_one(new_user)
+    result = mongo.db.doctors.insert_one(new_user)
     return jsonify({'message': 'Registration successful, awaiting admin approval', 'id': str(result.inserted_id)}), 201
 
 @app.route('/api/login', methods=['POST'])
@@ -228,10 +230,137 @@ def admin_login():
             'email': user.get('email', '')
         }), 200
     return jsonify({'message': 'Invalid credentials'}), 401
-#
-# Routes
 
 
+
+#list des admin
+@app.route('/api/admins', methods=['GET'])
+def get_admins():
+    admins = list(mongo.db.admins.find({'role': 'admin'}))
+    for admin in admins:
+        admin['_id'] = str(admin['_id'])  # Convert ObjectId to string
+    return jsonify(admins), 200
+
+#edit admin 
+@app.route('/api/admins/<admin_id>', methods=['PUT'])
+def update_admin(admin_id):
+    data = request.get_json()
+    update_fields = {}
+
+    if 'email' in data:
+        update_fields['email'] = data['email']
+    if 'password' in data:
+        update_fields['password'] = data['password']
+
+    if not update_fields:
+        return jsonify({'message': 'Nothing to update'}), 400
+
+    result = mongo.db.admins.update_one(
+        {'_id': ObjectId(admin_id)},
+        {'$set': update_fields}
+    )
+
+    if result.matched_count == 0:
+        return jsonify({'message': 'Admin not found'}), 404
+
+    return jsonify({'message': 'Admin updated successfully'}), 200
+
+#delete admin:
+
+@app.route('/api/admins/<admin_id>', methods=['DELETE'])
+def delete_admin(admin_id):
+    result = mongo.db.admins.delete_one({'_id': ObjectId(admin_id)})
+
+    if result.deleted_count == 0:
+        return jsonify({'message': 'Admin not found'}), 404
+
+    return jsonify({'message': 'Admin deleted successfully'}), 200
+
+
+# Send email
+
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+def send_email(to_email, password):
+    from_email = os.getenv('MAIL_USER')
+    app_password = os.getenv('MAIL_PASSWORD')
+
+    if not from_email or not app_password:
+        raise Exception("Missing email credentials in environment")
+
+    subject = " Accès administrateur MedScan AI"
+    body = f"""
+        Bonjour,
+
+        Voici vos informations d'accès administrateur :
+
+        🔑 Email : {to_email}
+        🔒 Mot de passe : {password}
+
+        Veuillez les conserver en lieu sûr.
+
+        -- MedScan AI
+    """
+
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = from_email
+    msg['To'] = to_email
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        server.login(from_email, app_password)
+        server.sendmail(from_email, [to_email], msg.as_string())
+
+@app.route('/api/send_admin_credentials', methods=['POST'])
+def send_admin_credentials():
+    data = request.get_json()
+    if not data or 'email' not in data or 'password' not in data:
+        return jsonify({'message': 'Email and password are required'}), 400
+
+    try:
+        send_email(data['email'], data['password'])
+        return jsonify({'message': '✅ Email sent successfully'}), 200
+    except Exception as e:
+        return jsonify({'message': f' Failed to send email: {str(e)}'}), 500
+
+
+
+#adding admins
+
+
+
+
+@app.route('/api/create_admin', methods=['POST'])
+def create_admin():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'message': 'Email and password are required'}), 400
+
+    if mongo.db.admins.find_one({'email': email}):
+        return jsonify({'message': 'Admin with this email already exists'}), 400
+
+    admin_data = {
+        'email': email,
+        'password': password,
+        'role': 'admin',  
+    }
+
+    inserted = mongo.db.admins.insert_one(admin_data)
+
+    return jsonify({'message': 'Admin created successfully', 'id': str(inserted.inserted_id)}), 201
+
+
+
+
+
+
+
+# Routes gestion doctors 
 @app.route('/api/admin/doctors', methods=['GET'])
 def get_doctors():
     doctors = list(mongo.db.doctors.find())
@@ -250,7 +379,7 @@ def get_doctors():
 @app.route('/api/admin/doctors/<doctor_id>', methods=['PUT'])
 def update_doctor(doctor_id):
     data = request.get_json()
-    mongo.db.doctors.update_one({"_id": doctor_id}, {"$set": {
+    mongo.db.doctors.update_one({"_id": ObjectId(doctor_id)}, {"$set": {
         "nom": data.get('nom'),
         "prenom": data.get('prenom'),
         "affiliation": data.get('affiliation'),
@@ -263,17 +392,17 @@ def update_doctor(doctor_id):
 
 @app.route('/api/admin/approve/<doctor_id>', methods=['PUT'])
 def approve_doctor(doctor_id):
-    mongo.db.doctors.update_one({"_id": doctor_id}, {"$set": {"approved": True}})
+    mongo.db.doctors.update_one({"_id": ObjectId(doctor_id)}, {"$set": {"approved": True}})
     return jsonify({'message': 'Doctor approved'}), 200
 
 @app.route('/api/admin/reject/<doctor_id>', methods=['PUT'])
 def reject_doctor(doctor_id):
-    mongo.db.doctors.delete_one({"_id": doctor_id})
-    return jsonify({'message': 'Doctor rejected and removed'}), 200
+    mongo.db.doctors.update_one({"_id": ObjectId(doctor_id)}, {"$set": {"approved": False}})
+    return jsonify({'message': 'Doctor rejected  and ready to be removed'}), 200
 
 @app.route('/api/admin/doctors/<doctor_id>', methods=['DELETE'])
 def delete_doctor(doctor_id):
-    mongo.db.doctors.delete_one({"_id": doctor_id})
+    mongo.db.doctors.delete_one({"_id": ObjectId(doctor_id)})
     return jsonify({'message': 'Doctor deleted'}), 200
 
 

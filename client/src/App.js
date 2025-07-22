@@ -16,6 +16,8 @@ import LoginAdmin from './components/LoginAdmin';
 import Admin from './components/Admin';
 import CreatePatientForm from './components/pages/CreatePatientForm';
 import Profile from './components/pages/profile';
+import ListAdmin from './components/ListAdmin';
+
 
 
 function App() {
@@ -208,7 +210,7 @@ const handleLogout = () => {
             <Route
               path="/admin"
               element={
-                !user ? <Navigate to="/admin/login" replace /> : user.role === 'admin' ? <Admin user={user} /> : <Navigate to="/acceuilservice" replace />
+                !user ? <Navigate to="/admin/login" replace /> : user.role === 'admin' ? <Admin user={user} handleLogout={handleLogout}/> : <Navigate to="/acceuilservice" replace />
               }
             />
             <Route
@@ -217,7 +219,28 @@ const handleLogout = () => {
                 !user ? <Navigate to={user?.role === 'admin' ? '/admin/login' : '/login'} replace /> : <Profile user={user} handleLogout={handleLogout} />
               }
             />
+            <Route
+              path="/profile"
+              element={
+                !user ? <Navigate to={user?.role === 'admin' ? '/admin/login' : '/login'} replace /> : <Profile user={user} handleLogout={handleLogout} />
+              }
+            />
+            <Route
+          path="/Listadmin"
+          element={
+            !user ? (
+              <Navigate to="/admin/login" replace />
+            ) : user.role !== 'admin' ? (
+              <div>Access Denied</div>
+            ) : (
+              <ListAdmin user={user} handleLogout={handleLogout} />
+            )
+          }
+        />
+
       </Routes>
+      
+
 
         </div>
       </div>
