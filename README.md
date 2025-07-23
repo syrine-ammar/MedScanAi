@@ -225,7 +225,47 @@ You don't need to create `myDatabase` manually — it will be created when the a
 ---
 
 ✅ **You're now ready to run the Flask and React apps with MongoDB support!**
+
+
+
 ---
+# 📬 Configuration de l'envoi d'e-mails - MedScan AI
+
+Ce projet permet à un super administrateur d'envoyer par e-mail les identifiants d'accès à chaque nouvel administrateur via le serveur SMTP de Gmail.
+
+---
+
+## ✉️ Étapes de configuration de l’envoi d’e-mails via Gmail
+
+###  1. Activer la validation en deux étapes (2FA) sur votre compte Google
+
+1. Rendez-vous sur : [https://myaccount.google.com/security](https://myaccount.google.com/security)
+2. Dans la section **Connexion à Google**, cliquez sur **Validation en deux étapes**.
+3. Activez la 2FA si ce n’est pas déjà fait.
+
+---
+
+### 🛠 2. Générer un mot de passe d’application
+
+1. Allez sur : [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+2. Dans **Sélectionner l’application**, choisissez `Autre (personnalisée)` et nommez-la `MedScan AI Mail`.
+3. Cliquez sur **Générer**.
+4. Copiez le mot de passe à 16 caractères généré et **gardez-le précieusement**.
+
+---
+
+###  3. Créer un fichier `.env`
+
+À la racine du projet Flask, créez un fichier `.env` :
+
+```env
+MAIL_USER=your_email@gmail.com
+MAIL_PASSWORD=mot_de_passe_application de 16 caractères
+
+```
+
+
+
 👨‍💻 Author
 Made with ❤️ by Syrine Ammar
 GitHub Profile
