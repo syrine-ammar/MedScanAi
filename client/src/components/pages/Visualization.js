@@ -1,112 +1,112 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import axios from 'axios';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 function Visualize({ user, handleLogout }) {
+  const { id } = useParams();
   const [patients, setPatients] = useState([]);
   const [patient, setPatient] = useState(null);
-  const [imagesInput, setImagesInput] = useState([]);
   const [imagesOutput, setImagesOutput] = useState([]);
   const [modelURL, setModelURL] = useState(null);
-  const [error, setError] = useState(null);
-  const { id } = useParams();
+  const [cleanedImages, setCleanedImages] = useState([]);
+  const [showCleaned, setShowCleaned] = useState(false);
   const navigate = useNavigate();
-  const mountRef = useRef();
+  const mountRef = useRef(null);
 
-  // Fetch patients or patient + visualization
-  useEffect(() => {
-    if (!user) return;
+ useEffect(() => {
+  if (!user) return;
 
-    if (!id) {
-      axios
-        .get(`http://localhost:5000/api/patients?doctor_id=${user.id}`)
-        .then(res => setPatients(res.data))
-        .catch(() => setPatients([]));
-    } else {
-      axios
-        .get(`http://localhost:5000/api/patients/${id}`)
-        .then(res => {
-          setPatient(res.data);
-          return axios.get(`http://localhost:5000/api/visualize/${id}`);
-        })
-        .then(res => {
-          setImagesInput(res.data.images_input || []);
-          setImagesOutput(res.data.images_output || []);
-        })
-        .catch(err => console.error(err));
-    }
-  }, [id, user]);
+  // Reset cleaned images when switching patients
+  setShowCleaned(false);
+  setCleanedImages([]);
+  setModelURL(null);
 
-  // 3D model viewer
-  useEffect(() => {
-    if (!modelURL || !mountRef.current) return;
+  if (!id) {
+    axios
+      .get(`http://localhost:5000/api/patients?doctor_id=${user.id}`)
+      .then(res => setPatients(res.data))
+      .catch(() => setPatients([]));
+  } else {
+    axios
+      .get(`http://localhost:5000/api/patients/${id}`)
+      .then(res => {
+        setPatient(res.data);
+        return axios.get(`http://localhost:5000/api/export/${id}`);
+      })
+      .then(res => {
+        setImagesOutput(res.data.images_output || []);
+      })
+      .catch(err => console.error(err));
+  }
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, 400 / 400, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ alpha: true });
-    renderer.setSize(400, 400);
-    mountRef.current.innerHTML = '';
-    mountRef.current.appendChild(renderer.domElement);
+  // Cleanup temp on unmount
+  return () => {
+    setShowCleaned(false);
+    setCleanedImages([]);
 
-    const light = new THREE.AmbientLight(0xffffff, 1);
-    scene.add(light);
+  };
+}, [id, user]);
+ 
 
-    const loader = new GLTFLoader();
-    loader.load(modelURL, (gltf) => {
-      const model = gltf.scene;
-      scene.add(model);
-      camera.position.z = 2;
 
-      const animate = () => {
-        requestAnimationFrame(animate);
-        model.rotation.y += 0.01;
-        renderer.render(scene, camera);
-      };
-      animate();
-    });
+  
+const downloadCleanedImages = () => {
+  if (!cleanedImages || cleanedImages.length === 0) {
+    alert("Aucune image nettoyée à télécharger");
+    return;
+  }
 
-    return () => {
-      while (mountRef.current.firstChild) {
-        mountRef.current.removeChild(mountRef.current.firstChild);
-      }
-    };
-  }, [modelURL]);
+  const zip = new JSZip();
+  const folder = zip.folder("cleaned_images");
 
+  cleanedImages.forEach((img, index) => {
+    // Remove data:image/png;base64, prefix
+    const base64 = img.includes(",") ? img.split(",")[1] : img;
+    folder.file(`cleaned-${index}.png`, base64, { base64: true });
+  });
+
+  zip.generateAsync({ type: "blob" }).then((content) => {
+    saveAs(content, `patient_${patient.code}_cleaned_images.zip`);
+  });
+};
   const generate3DModel = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/visualize/${id}/generate-3d`);
       setModelURL(`http://localhost:5000${res.data.model_url}`);
+      alert("Modèle 3D généré !");
     } catch (err) {
-      setError('Erreur lors de la génération du modèle 3D.');
+      console.error(err);
+      alert("Erreur lors de la génération du modèle 3D.");
     }
   };
 
-  const cleanupImages = async () => {
-    try {
-      await axios.post(`http://localhost:5000/api/patient/${id}/cleanup`, {}, {
-        headers: { Authorization: `Bearer ${user.token}` }
+  const viewCleanedImages = () => {
+    axios.get(`http://localhost:5000/api/visualize/${id}/cleaned-images`)
+      .then(res => {
+        setCleanedImages(res.data.images || []);
+        setShowCleaned(true); // ✅ show only on click
+      })
+      .catch(err => {
+        console.error("Erreur images nettoyées :", err);
+        setShowCleaned(false);
       });
-      alert("Images nettoyées !");
-      window.location.reload();
-    } catch (err) {
-      alert("Erreur lors du nettoyage.");
-    }
   };
 
-  const downloadZip = async () => {
-    const res = await axios.get(`http://localhost:5000/api/patient/${id}/download-nii-zip`, {
-      responseType: 'blob',
-      headers: { Authorization: `Bearer ${user.token}` }
-    });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `patient_${id}_nii.zip`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  const handleShow3D = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/visualize/${id}/generate-3d`);
+      const fullURL = `http://localhost:5000${res.data.model_url}`;
+      window.open(fullURL, '_blank');
+      setModelURL(fullURL);
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la génération du modèle 3D.");
+    }
   };
 
   return (
@@ -128,7 +128,7 @@ function Visualize({ user, handleLogout }) {
             <li><Link to="/segment">⬆️ Importer des images</Link></li>
             <li><Link to="/export">📤 Exporter les résultats</Link></li>
             <li><Link to="/visualize">🧠 Visualisation 3D</Link></li>
-            <li><Link to="/profile">👤 profile</Link></li>
+            <li><Link to="/profile">👤 Profile</Link></li>
             <button onClick={() => { handleLogout(); navigate('/login'); }}>
               ↩️ Déconnexion
             </button>
@@ -136,55 +136,86 @@ function Visualize({ user, handleLogout }) {
         </nav>
 
         <div className="main-content p-10 overflow-y-auto w-full">
-          <h1 className="text-3xl font-bold mb-6 text-center">Visualisation 3D du patient</h1>
+          <h1 className="text-3xl font-bold mb-6 text-center">🧠 Visualisation 3D</h1>
 
           {!id ? (
             <>
               <h2 className="text-xl text-center mb-6">Veuillez sélectionner un patient :</h2>
-              <table style={{ width: '100%', border: '1px solid gray' }}>
-                <thead><tr><th>Nom</th><th>Prénom</th><th>Code</th><th>Action</th></tr></thead>
-                <tbody>
-                  {patients.map(p => (
-                    <tr key={p._id}>
-                      <td>{p.nom}</td>
-                      <td>{p.prenom}</td>
-                      <td>{p.code}</td>
-                      <td>
-                        <button onClick={() => navigate(`/visualize/${p._id}`)}>Sélectionner</button>
-                      </td>
+              <div style={styles.tableContainer}>
+                <table style={styles.patientsTable}>
+                  <thead>
+                    <tr>
+                      <th style={{ ...styles.thTd, ...styles.th }}>Nom</th>
+                      <th style={{ ...styles.thTd, ...styles.th }}>Prénom</th>
+                      <th style={{ ...styles.thTd, ...styles.th }}>Code</th>
+                      <th style={{ ...styles.thTd, ...styles.th }}>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {patients.map(p => (
+                      <tr key={p._id}>
+                        <td style={styles.thTd}>{p.nom}</td>
+                        <td style={styles.thTd}>{p.prenom}</td>
+                        <td style={styles.thTd}>{p.code}</td>
+                        <td style={styles.thTd}>
+                          <button style={styles.btnLarge} onClick={() => navigate(`/visualize/${p._id}`)}>
+                            Sélectionner
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           ) : patient ? (
             <>
-              <div className="mb-6 flex gap-4 justify-center">
-                <button onClick={generate3DModel} className="btn btn-primary">🧠 Générer 3D</button>
-                <button onClick={cleanupImages} className="btn btn-danger">🧹 clean up</button>
-                <button onClick={downloadZip} className="btn btn-success"> Télécharger .nii</button>
+              <h2 className="text-xl text-center mb-6">Patient : {patient.code}</h2>
+              <div style={styles.buttonContainer}>
+                <button onClick={generate3DModel} className="btn btn-primary" style={styles.actionButton}>
+                  Générer le modèle 3D
+                </button>
+                <button onClick={viewCleanedImages} className="btn btn-info" style={styles.actionButton}>
+                  🧹 Voir images nettoyées
+                </button>
+                {modelURL && (
+                  <button onClick={handleShow3D} className="btn btn-success" style={styles.actionButton}>
+                    👁️ Voir en 3D
+                  </button>
+                )}
               </div>
 
-              {error && <p className="text-red-500 text-center">{error}</p>}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-center font-semibold mb-2">🖼️ Images d'entrée</h3>
-                  {imagesInput.map((img, i) => (
-                    <img key={i} src={img.startsWith('data:') ? img : `data:image/png;base64,${img}`} className="w-full rounded shadow mb-4" alt={`input-${i}`} />
-                  ))}
+              <div style={styles.imagesContainer}>
+                <div style={styles.imageColumn}>
+                  <h3 className="text-lg font-semibold mb-2 text-center">🔬 Images segmentées</h3>
+                  <div style={styles.imageScroll}>
+                    {imagesOutput.length > 0 ? imagesOutput.map((img, i) => (
+                      <img key={i} src={img.startsWith('data:') ? img : `data:image/png;base64,${img}`} alt={`output-${i}`} style={styles.imageStyle} />
+                    )) : <p style={{ textAlign: 'center' }}>Aucune image segmentée.</p>}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-center font-semibold mb-2">🔬 Images segmentées</h3>
-                  {imagesOutput.map((img, i) => (
-                    <img key={i} src={img.startsWith('data:') ? img : `data:image/png;base64,${img}`} className="w-full rounded shadow mb-4" alt={`output-${i}`} />
-                  ))}
-                </div>
-              </div>
 
-              <div className="mt-8 flex justify-center">
-                <div ref={mountRef} className="w-[400px] h-[400px] border shadow rounded"></div>
+                {showCleaned && cleanedImages.length > 0 && (
+                  <div style={{ ...styles.imageColumn, marginTop: '40px' }}>
+                    <h3 className="text-lg font-semibold mb-2 text-center"> Images après nettoyage</h3>
+                    <div style={styles.imageScroll}>
+                      {cleanedImages.map((img, i) => (
+                        <img key={i} src={img} alt={`cleaned-${i}`} style={styles.imageStyle} />
+                      ))}
+                    </div>
+                  
+                      <button
+                          onClick={downloadCleanedImages}
+                          className="btn btn-primary"
+                          style={styles.actionButton}
+                        >
+                          💾 Sauvegarder images nettoyées
+                        </button>
+                  </div>
+                )}
+                  
               </div>
+            
             </>
           ) : null}
         </div>
@@ -194,3 +225,83 @@ function Visualize({ user, handleLogout }) {
 }
 
 export default Visualize;
+
+const styles = {
+  tableContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: '40px',
+    marginBottom: '40px',
+  },
+  patientsTable: {
+    width: '90%',
+    maxWidth: '1100px',
+    borderCollapse: 'collapse',
+    border: '2px solid #ccc',
+    backgroundColor: '#fff',
+    borderRadius: '10px',
+    overflow: 'hidden',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  },
+  thTd: {
+    padding: '16px',
+    textAlign: 'center',
+    borderBottom: '1px solid #ddd',
+    fontSize: '1.1rem',
+  },
+  th: {
+    backgroundColor: '#f8f8f8',
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  btnLarge: {
+    padding: '10px 20px',
+    fontSize: '1rem',
+    borderRadius: '6px',
+    margin: '6px',
+    cursor: 'pointer',
+  },
+  buttonContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '20px',
+    marginBottom: '30px',
+  },
+  actionButton: {
+    padding: '12px 24px',
+    fontSize: '1rem',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    boxShadow: '0 3px 6px rgba(0,0,0,0.15)',
+    transition: 'transform 0.2s ease',
+  },
+  imagesContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '40px',
+    flexWrap: 'wrap',
+  },
+  imageColumn: {
+    width: '45%',
+    backgroundColor: '#ffffffcc',
+    borderRadius: '10px',
+    padding: '20px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  },
+  imageScroll: {
+    maxHeight: '400px',
+    overflowY: 'auto',
+    padding: '10px',
+    border: '1px solid #ddd',
+    borderRadius: '8px',
+    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+  },
+  imageStyle: {
+    width: '100%',
+    maxHeight: '240px',
+    objectFit: 'contain',
+    marginBottom: '12px',
+    borderRadius: '8px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+  },
+};

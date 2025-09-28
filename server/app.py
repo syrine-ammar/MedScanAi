@@ -19,8 +19,11 @@ import requests
 
 
 from pymongo import MongoClient
-import trimesh
 from bson import ObjectId
+
+
+from skimage import measure
+import trimesh
 
 
 app = Flask(__name__)
@@ -496,8 +499,8 @@ def get_patient(patient_id):
         'date_de_naissance': p.get('date_de_naissance', ''),
         'autre_infos': p.get('autre_infos', ''),
         'segmented': p.get('segmented', False),
-        'image_input': p.get('image_input', ''),
-        'image_output': p.get('image_output', ''),
+        'images_input': p.get('images_input', []),
+        'images_output': p.get('images_output', []),
     })
 
 #delete patient:
@@ -592,63 +595,108 @@ def export(patient_id):
 
     except Exception as e:
         return jsonify({'message': f'Error during export: {str(e)}'}), 500
-
-
-
-
-
-
+    
 
 #model 3d
 
-# Assuming images stored in database as base64, decode and clean first
+# --- Fonction pour nettoyer les images ---
 def clean_base64_image(base64_str):
-    import base64
+    # Nettoyer le header si nécessaire
+    if base64_str.startswith("data:image"):
+        base64_str = base64_str.split(",")[1]
+
     img_data = base64.b64decode(base64_str)
     nparr = np.frombuffer(img_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
 
+    if img is None:
+        raise ValueError("cv2.imdecode failed to read image")
+
     # Denoise
     img = cv2.medianBlur(img, 5)
+
     # Threshold
     _, img_thresh = cv2.threshold(img, 30, 255, cv2.THRESH_BINARY)
+
     return img_thresh
 
-'''@app.route('/api/visualize/<patient_id>')
-def get_cleaned_volume(patient_id):
-    # Fetch base64 images from DB here (pseudo-code)
-    patient = mongo.db.patients.find_one({"_id": ObjectId(patient_id)})
-    base64_images = patient.get('images_output', [])
+# --- Génération du modèle 3D ---
+@app.route('/api/visualize/<patient_id>/generate-3d', methods=['GET'])
+def generate_3d_from_db(patient_id):
+    try:
+        patient = mongo.db.patients.find_one({"_id": ObjectId(patient_id)})
+        if not patient:
+            return jsonify({"error": "Patient not found"}), 404
 
-    volume_slices = []
-    for b64 in base64_images:
-        img = clean_base64_image(b64)
-        volume_slices.append(img)
+        if "images_output" not in patient or not patient["images_output"]:
+            return jsonify({"error": "No segmented images"}), 404
 
-    # Stack into 3D volume (assuming all images are same size)
-    volume = np.stack(volume_slices, axis=-1)  # shape: (height, width, depth)
+        image_list = patient["images_output"]
+        processed_images = []
 
-    # Normalize to 0-1 for marching cubes
-    volume = volume / 255.0
+        # Nettoyer et convertir les images en numpy arrays
+        for img_base64 in image_list:
+            try:
+                img_cleaned = clean_base64_image(img_base64)
+                processed_images.append(img_cleaned)
+            except Exception as e:
+                print(f"Error processing image: {e}")
 
-    # Extract surface mesh via marching cubes
-    verts, faces, normals, values = measure.marching_cubes(volume, level=0.5)
+        if not processed_images:
+            return jsonify({"error": "No valid images"}), 500
 
-    # Create trimesh mesh and export to file
-    mesh = trimesh.Trimesh(vertices=verts, faces=faces)
-    output_path = f"./models/{patient_id}.glb"
-    mesh.export(output_path)
+        # Créer un stack pour le marching cubes
+        image_stack = np.array(processed_images).astype(np.uint8)
+        image_stack = image_stack.transpose(1, 2, 0)  # Depth on z-axis
 
-    return jsonify({"model_url": f"/api/model/{patient_id}"})'''
+        # Marching cubes
+        spacing = (1.0, 1.0, 1.0)
+        verts, faces, _, _ = measure.marching_cubes(image_stack, level=0.5, spacing=spacing)
+        mesh = trimesh.Trimesh(vertices=verts, faces=faces)
+
+        # Sauvegarder le modèle dans static pour le frontend
+        model_path = f"static/models/{patient_id}.obj"
+        os.makedirs("static/models", exist_ok=True)
+        mesh.export(model_path)
+
+        return jsonify({"model_url": f"/static/models/{patient_id}.obj"})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# --- Récupérer les images nettoyées en mémoire ---
+@app.route('/api/visualize/<patient_id>/cleaned-images', methods=['GET'])
+def get_cleaned_images(patient_id):
+    try:
+        patient = mongo.db.patients.find_one({"_id": ObjectId(patient_id)})
+        if not patient or "images_output" not in patient:
+            return jsonify({"images": []})
+
+        cleaned_images_base64 = []
+
+        for img_base64 in patient["images_output"]:
+            try:
+                img_cleaned = clean_base64_image(img_base64)
+                pil_img = Image.fromarray(img_cleaned)
+                buffer = io.BytesIO()
+                pil_img.save(buffer, format="PNG")
+                b64_img = base64.b64encode(buffer.getvalue()).decode("utf-8")
+                cleaned_images_base64.append(f"data:image/png;base64,{b64_img}")
+            except Exception as e:
+                print(f"Error cleaning image: {e}")
+
+        return jsonify({"images": cleaned_images_base64})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/model/<patient_id>')
-def serve_model(patient_id):
-    path = f"./models/{patient_id}.glb"
-    if os.path.exists(path):
-        return send_file(path, mimetype='model/gltf-binary')
-    else:
-        return jsonify({"error": "Model not found"}), 404
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

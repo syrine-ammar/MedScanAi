@@ -307,28 +307,68 @@ const handleSubmit = async (e) => {
               <p><strong>Autres infos:</strong> {selectedPatient.autre_infos}</p>
 
               {/* Show images if they exist */}
-              {selectedPatient.images_input && (
-                <>
-                  <h3>Images d'entrée</h3>
-                  <img
-                    src={selectedPatient.images_input}
-                    alt="Images input"
-                    style={{ maxWidth: '100%', maxHeight: '300px', marginBottom: '10px', borderRadius: '8px' }}
-                  />
-                </>
-              )}
+            {/* Input images */}
+  {selectedPatient.images_input && (
+    <>
+      <h3>Images d'entrée</h3>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+        {(Array.isArray(selectedPatient.images_input)
+          ? selectedPatient.images_input
+          : (() => {
+              try {
+                return JSON.parse(selectedPatient.images_input);
+              } catch {
+                return [selectedPatient.images_input];
+              }
+            })()
+        ).map((img, i) => (
+          <img
+            key={i}
+            src={img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`}
+            alt={`input-${i}`}
+            style={{
+              maxWidth: '150px',
+              maxHeight: '150px',
+              borderRadius: '8px',
+            }}
+          />
+        ))}
+      </div>
+    </>
+  )}
 
-              {selectedPatient.images_output && (
-                <>
-                  <h3>Images de sortie</h3>
-                  <img
-                  
-                    src={`data:image/png;base64 ,${selectedPatient.images_output}`}
-                    alt="Images output"
-                    style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px' }}
-                  />
-                </>
-              )}
+  {/* Output images */}
+  {selectedPatient.images_output && (
+    <>
+      <h3>Images de sortie</h3>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+        {(Array.isArray(selectedPatient.images_output)
+          ? selectedPatient.images_output
+          : (() => {
+              try {
+                return JSON.parse(selectedPatient.images_output);
+              } catch {
+                return [selectedPatient.images_output];
+              }
+            })()
+        ).map((img, i) => (
+          <img
+            key={i}
+            src={img.startsWith('data:') ? img : `data:image/png;base64,${img}`}
+            alt={`output-${i}`}
+            style={{
+              maxWidth: '150px',
+              maxHeight: '150px',
+              borderRadius: '8px',
+            }}
+          />
+        ))}
+      </div>
+    </>
+  )}
+
+
+
            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between' }}>
   <button
     onClick={() => {
